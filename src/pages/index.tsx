@@ -1,11 +1,53 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import { Inter } from 'next/font/google'
-import styles from '@/styles/Home.module.css'
+import Head from "next/head";
+import Image from "next/image";
+import { Inter } from "next/font/google";
+import styles from "@/styles/Home.module.css";
+import { chains } from "@lens-network/sdk/viem";
+import { Address, createWalletClient, custom } from "viem";
+import { PublicClient, testnet } from "@lens-protocol/client";
+import { useEffect } from "react";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
 export default function Home() {
+  const chain = chains.testnet;
+
+  const handler = async () => {
+    const [address] = (await window.ethereum!.request({
+      method: "eth_requestAccounts",
+    })) as [Address];
+    const walletClient = createWalletClient({
+      account: address,
+      chain,
+      transport: custom(window.ethereum!),
+    });
+
+    const client = PublicClient.create({
+      environment: testnet,
+    });
+
+    const sessionClient = await client
+      .login({
+        builder: {
+          address: walletClient.account.address,
+        },
+        signMessage: async (message: any) =>
+          walletClient.signMessage({ message }),
+      })
+      .match(
+        (result) => result,
+        (error) => {
+          throw error;
+        }
+      );
+
+    console.log("session client: ", sessionClient);
+  };
+
+  useEffect(() => {
+    handler()
+  }, [])
+
   return (
     <>
       <Head>
@@ -26,7 +68,7 @@ export default function Home() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              By{' '}
+              By{" "}
               <Image
                 src="/vercel.svg"
                 alt="Vercel Logo"
@@ -110,5 +152,5 @@ export default function Home() {
         </div>
       </main>
     </>
-  )
+  );
 }
